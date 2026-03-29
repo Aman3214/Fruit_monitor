@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruit Spoilage Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <header>
+        <h1>ENIAC | COLD STORAGE MONITOR</h1>
+        <div id="status">SYSTEM ONLINE</div>
+    </header>
+
+    <main class="container">
+        <div class="camera-section">
+            <h2>LIVE FEED</h2>
+            <div class="image-container">
+                <img id="camera-feed" src="https://placehold.co/600x400?text=Waiting+for+Data" alt="Camera Feed">
+                <div id="ai-label">CONFIDENCE: <span id="confidence">0</span>%</div>
+            </div>
+        </div>
+
+        <div class="data-section">
+            <div class="card">
+                <label>TEMPERATURE</label>
+                <div class="value"><span id="temp">--</span>°C</div>
+            </div>
+            <div class="card">
+                <label>HUMIDITY</label>
+                <div class="value"><span id="hum">--</span>%</div>
+            </div>
+            <div class="card">
+                <label>GAS LEVEL (MQ135)</label>
+                <div class="value"><span id="gas">--</span> PPM</div>
+            </div>
+        </div>
+
+        <section class="log-section">
+            <h3>RECENT SPOILAGE EVENTS (LAST 5)</h3>
+            <table id="log-table">
+                <thead>
+                    <tr>
+                        <th>TIME</th>
+                        <th>TEMP</th>
+                        <th>GAS</th>
+                        <th>CONFIDENCE</th>
+                    </tr>
+                </thead>
+                <tbody id="log-body">
+                    </tbody>
+            </table>
+        </section>
+        
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
