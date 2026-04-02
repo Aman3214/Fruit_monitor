@@ -20,9 +20,14 @@ A real-time IoT and Deep Learning solution for monitoring fruit health using **E
     * **`index.html`**: The real-time dashboard UI.
     * **`script.js`**: Frontend logic for Socket.io and chart updates.
 
-### Other Files (/other_files)
+* **`hardware/`**:
+    * **`esp32_monitor.ino`**: The C++ source code for ESP32-CAM, MQ135, and DHT22 integration.
+    * **`pin_diagram.png`**: Visual schematic for wiring sensors to the ESP32-CAM GPIOs.
+    * **`Case_Design/`**: 3D model files or dimensions for the physical device enclosure.
+
+### Fruit trainer (/fruit_trainer)
 * **`fruit_trainer/`**: Complete pipeline for model development and dataset reorganization.
-* **Hardware Design**: Circuit diagrams and pin mapping for ESP32-CAM, MQ135, and DHT22.
+
 
 ---
 
