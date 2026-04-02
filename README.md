@@ -6,16 +6,16 @@ A real-time IoT and Deep Learning solution for monitoring fruit health using **E
 ## Project Structure
 
 ### Root Folder
-* **`main.py`**: The central orchestrator. It uses `subprocess` with `cwd` management to launch the Dashboard, AI Processor, and Mock Data scripts simultaneously.
-* **`test/test_output.py`**: Testing utility that simulates ESP32-CAM MQTT traffic (images and sensor data) for hardware-free debugging.
+* **`main.py`**: The central orchestrator. It uses `subprocess` with `cwd` (Current Working Directory) management to launch the Dashboard, AI Processor, and Mock Data scripts simultaneously, ensuring relative file paths are resolved correctly.
+* **`test/test_output.py`**: Testing utility that simulates ESP32-CAM MQTT traffic (Base64 images and sensor data) for hardware-free debugging.
 
 ### AI Engine (/ai_engine)
-* **`ai_processor.py`**: Core logic for MQTT subscription, image processing, and inference.
-* **`fruit_model.h5`**: The trained Keras/Tensorflow model file.
+* **`ai_processor.py`**: Core logic for MQTT subscription, image decoding, and TensorFlow inference.
+* **`fruit_model.h5`**: The trained Keras/TensorFlow model file.
 * **`env_requirements.txt`**: Python dependencies for the inference environment.
 
 ### Dashboard (/dashboard)
-* **`server.js`**: Node.js backend handling Socket.io events and MQTT bridging.
+* **`server.js`**: Node.js backend handling Socket.io events and bridging MQTT data to the web interface.
 * **`public/`**: Frontend web assets.
     * **`index.html`**: The real-time dashboard UI.
     * **`script.js`**: Frontend logic for Socket.io and chart updates.
@@ -37,7 +37,7 @@ A real-time IoT and Deep Learning solution for monitoring fruit health using **E
 ## Installation and Setup
 
 1. **Environment Setup**:
-   Ensure you have a Conda environment or virtual environment activated.
+   Ensure you have a Conda or virtual environment activated.
    ```bash
    pip install -r ai_engine/env_requirements.txt
    ```
@@ -58,7 +58,7 @@ A real-time IoT and Deep Learning solution for monitoring fruit health using **E
 
 ## Execution
 
-The system is designed to be launched from a single command. The `main.py` script handles the directory switching (CWD) automatically to ensure all relative file paths (like models and static assets) are resolved correctly.
+The system is designed to be launched from a single command. The `main.py` script manages the directory switching automatically.
 
 ### Full System Launch (Recommended)
 From the **project root** directory:
@@ -78,11 +78,31 @@ If you prefer to run components in separate terminals:
 
 ---
 
-## Testing and Verification
-To transition from testing to live hardware:
-1. Open `main.py`.
-2. Comment out the **Mock Data Section** (Step 3) in the `start_processes` function.
-3. Power on the ESP32-CAM configured to point to your machine's IP address.
+## Transitioning from Mock to Real Hardware
+
+To use the system with an actual **ESP32-CAM** instead of the simulation scripts:
+
+### 1. Disable the Mock Stream
+Open `main.py` and comment out the lines associated with the mock data process:
+```python
+# In main.py:
+# mock_proc = subprocess.Popen(["python", MOCK_SCRIPT], cwd="test")
+# processes.append(mock_proc)
+```
+
+### 2. Configure the ESP32-CAM
+Update your Arduino sketch (`.ino`) with your computer's **Local IP Address**.
+* Find your IP on Linux/Mac: `hostname -I`
+* Find your IP on Windows: `ipconfig`
+
+```cpp
+// In your ESP32 Arduino code:
+const char* mqtt_server = "192.168.1.XX"; // Your computer's IP
+const char* topic = "esp32/cam_data";     // Match this in ai_processor.py
+```
+
+### 3. Network Security
+Ensure both the ESP32 and the Computer are on the **same Wi-Fi network**. If the connection fails, allow incoming traffic on the MQTT port (1883) via your firewall.
 
 ---
 
