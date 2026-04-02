@@ -1,63 +1,56 @@
 import subprocess
 import time
 import sys
-import os
-import signal
 
 # --- CONFIGURATION ---
-# Change these paths to match your actual file names/locations
-CONDA_ENV = "fruit_monitor"
-PATH_TO_AI = "fruit_monitor/ai_engine/ai_processor.py"
-PATH_TO_NODE = "fruit_monitor/dashboard/server.js"  # Assuming your dashboard is here
+# We only use the filename here because 'cwd' will put us in the right folder
+AI_SCRIPT = "ai_processor.py"
+NODE_SCRIPT = "server.js"
+MOCK_SCRIPT = "test_output.py"
 
 processes = []
 
 def start_processes():
-    print("Initializing Fruit Monitoring System for Presentation...")
-    
     try:
-        # 1. Start the Node.js Dashboard Server
-        print("[1/2] Starting Node.js Dashboard...")
-        node_proc = subprocess.Popen(["node", PATH_TO_NODE], 
-                                    stdout=subprocess.PIPE, 
-                                    stderr=subprocess.STDOUT,
-                                    text=True)
+        # 1. Start Node.js - This mimics: cd dashboard && node server.js
+        print("[1/3] Starting Dashboard...")
+        node_proc = subprocess.Popen(["node", NODE_SCRIPT], 
+                                    cwd="dashboard") 
         processes.append(node_proc)
-        time.sleep(2) # Give the server a moment to bind to the port
+        time.sleep(2)
 
-        # 2. Start the AI Processor via Conda
-        print("[2/2] Starting Python AI Processor (Conda)...")
-        # Use 'conda run' to ensure the correct environment and dependencies are used
-        ai_cmd = ["conda", "run", "-n", CONDA_ENV, "--no-capture-output", "python", PATH_TO_AI]
-        ai_proc = subprocess.Popen(ai_cmd, 
-                                  stdout=subprocess.PIPE, 
-                                  stderr=subprocess.STDOUT, 
-                                  text=True)
+        # 2. Start AI - This mimics: cd ai_engine && python ai_processor.py
+        print("[2/3] Starting AI Processor...")
+        ai_proc = subprocess.Popen(["python", AI_SCRIPT], 
+                                  cwd="ai_engine")
         processes.append(ai_proc)
+        time.sleep(2)
 
-        print("\nALL SYSTEMS ONLINE.")
-        print("Dashboard: http://localhost:3000")
-        print("Press Ctrl+C to shut down all services safely.\n")
+        # 3. Start Mock - This mimics: cd test && python test_output.py
+        print("[3/3] Starting Mock Data...")
+        mock_proc = subprocess.Popen(["python", MOCK_SCRIPT], 
+                                    cwd="test")
+        processes.append(mock_proc)
 
-        # Stream outputs to the console
+        print("\nALL SYSTEMS ONLINE. Press Ctrl+C to exit.")
+
         while True:
-            # Check if processes are still running
             for p in processes:
                 if p.poll() is not None:
-                    print(f"\nWarning: A process has stopped (Code: {p.returncode})")
-                    return
-            
+                    # If mock finishes (Code 0), keep others running
+                    if p == mock_proc and p.returncode == 0:
+                        continue
+                    print(f"Process stopped (Code: {p.returncode})")
+                    shutdown()
             time.sleep(1)
 
     except KeyboardInterrupt:
         shutdown()
 
 def shutdown():
-    print("\n\nShutting down services...")
+    print("\nShutting down...")
     for p in processes:
         p.terminate()
-        # On Windows, you might need p.kill() if terminate() is ignored
-    print("All processes stopped. Ready for next run.")
     sys.exit(0)
 
 if __name__ == "__main__":

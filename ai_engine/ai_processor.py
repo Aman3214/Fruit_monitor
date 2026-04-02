@@ -7,17 +7,15 @@ import paho.mqtt.client as mqtt
 import tensorflow as tf
 from PIL import Image
 
-# 1. Configuration & Model Loading
-MODEL_PATH = "ai_engine/fruit_model.h5"
+# Configuration & Model Loading
+MODEL_PATH = "fruit_model.h5"
 MQTT_BROKER = "localhost"
 SUB_TOPIC = "hardware/data"
 PUB_TOPIC = "dashboard/update"
 
-# Load your trained model
 print(f"Loading model from {MODEL_PATH}...")
 model = tf.keras.models.load_model(MODEL_PATH)
 
-# Note: Update these to match your model's training parameters
 IMG_HEIGHT = 224 
 IMG_WIDTH = 224
 
@@ -38,7 +36,6 @@ def process_and_predict(base64_str):
         # Run Inference
         predictions = model.predict(img_array)
         
-        # Assuming binary classification: = Fresh, = Spoiled
         # Adjust logic if your model uses categorical (multi-class) output
         confidence = float(predictions) * 100
         is_spoiled = confidence > 75.0 # Threshold for Red Alert

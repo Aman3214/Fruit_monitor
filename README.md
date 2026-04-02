@@ -6,45 +6,38 @@ A real-time IoT and Deep Learning solution for monitoring fruit health using **E
 ## Project Structure
 
 ### Root Folder
-* **`main.py`**: The primary execution script coordinating application logic and AI inference.
-* **`mock_esp32.py`**: Testing utility that simulates ESP32-CAM MQTT traffic (images and sensor data) for hardware-free debugging.
+* **`main.py`**: The central orchestrator. It uses `subprocess` with `cwd` management to launch the Dashboard, AI Processor, and Mock Data scripts simultaneously.
+* **`test/test_output.py`**: Testing utility that simulates ESP32-CAM MQTT traffic (images and sensor data) for hardware-free debugging.
 
 ### AI Engine (/ai_engine)
-* **`ai_processor.py`**: Core logic for MQTT subscription and Base64 image processing.
-* **`fruit_model.h5`**: The trained Keras/TensorFlow model file.
+* **`ai_processor.py`**: Core logic for MQTT subscription, image processing, and inference.
+* **`fruit_model.h5`**: The trained Keras/Tensorflow model file.
 * **`env_requirements.txt`**: Python dependencies for the inference environment.
-* **`test_ai_output.py`**: Standalone script to verify model predictions locally.
 
 ### Dashboard (/dashboard)
 * **`server.js`**: Node.js backend handling Socket.io events and MQTT bridging.
-* **`public/`**: Contains the frontend web assets.
-    * **`index.html`**: The dashboard structure.
-    * **`style.css`**: Visual styling and layout.
-    * **`script.js`**: Frontend logic for real-time charts and data updates.
+* **`public/`**: Frontend web assets.
+    * **`index.html`**: The real-time dashboard UI.
+    * **`script.js`**: Frontend logic for Socket.io and chart updates.
 
 ### Other Files (/other_files)
-* **`fruit_trainer/`**: Complete pipeline for model development.
-    * **`train_model.py`**: Transfer learning script using MobileNetV2.
-    * **`requirements.txt`**: Training-specific dependencies.
-    * **`dataset/`**: The structured image repository used during training.
-    * **`FRUIT_16K/dataset_creation.py`**: Script to reorganize raw data into binary folders.
-* **Hardware Design**:
-    * **Pin Diagram**: Technical mapping of ESP32-CAM to MQ135 and DHT22.
-    * **Circuit Diagram**: Schematic for the final hardware assembly.
-    * **Case Assembly**: Files/instructions for the physical enclosure of the device.
+* **`fruit_trainer/`**: Complete pipeline for model development and dataset reorganization.
+* **Hardware Design**: Circuit diagrams and pin mapping for ESP32-CAM, MQ135, and DHT22.
 
 ---
 
 ## Technical Specifications
-* **AI Model**: MobileNetV2 (Transfer Learning) optimized for 224x224 pixels.
+* **AI Model**: MobileNetV2 optimized for 224x224 pixels.
 * **Network Protocol**: MQTT (Mosquitto) on Port 1883.
-* **Hardware Stack**: ESP32-CAM + MQ135 (Gas) + DHT22 (Temperature/Humidity).
+* **Communication**: WebSockets (Socket.io) for real-time Frontend updates.
+* **Hardware Stack**: ESP32-CAM, MQ135 (Gas), and DHT22 (Temp/Hum).
 
 ---
 
 ## Installation and Setup
 
-1. **Python Dependencies**:
+1. **Environment Setup**:
+   Ensure you have a Conda environment or virtual environment activated.
    ```bash
    pip install -r ai_engine/env_requirements.txt
    ```
@@ -55,41 +48,43 @@ A real-time IoT and Deep Learning solution for monitoring fruit health using **E
    npm install
    ```
 
+3. **MQTT Broker**:
+   Ensure **Mosquitto** is installed and running on your system.
+   ```bash
+   sudo systemctl start mosquitto
+   ```
+
+---
+
+## Execution
+
+The system is designed to be launched from a single command. The `main.py` script handles the directory switching (CWD) automatically to ensure all relative file paths (like models and static assets) are resolved correctly.
+
+### Full System Launch (Recommended)
+From the **project root** directory:
+```bash
+python main.py
+```
+This will:
+1. Start the **Node.js Dashboard** at `http://localhost:3000`.
+2. Start the **AI Processor** to listen for incoming images.
+3. Start the **Mock Data Stream** (for testing/presentation).
+
+### Manual Execution (Individual Components)
+If you prefer to run components in separate terminals:
+* **Dashboard**: `cd dashboard && node server.js`
+* **AI Engine**: `cd ai_engine && python ai_processor.py`
+* **Mock Data**: `cd test && python test_output.py`
+
 ---
 
 ## Testing and Verification
-
-### Verifying AI Inference
-To check if the trained model and the inference logic are working correctly without using the network or hardware:
-1. Navigate to the `ai_engine` directory.
-2. Run the test script:
-   ```bash
-   python test_ai_output.py
-   ```
-This script loads `fruit_model.h5`, processes a sample image, and prints the classification result (Fresh/Spoiled) to the console.
-
-### Verifying Dashboard with Mock Data
-To test the full system integration and Dashboard visualization without the ESP32-CAM hardware:
-1. Ensure your MQTT Broker (Mosquitto) is running.
-2. Start the Dashboard server:
-   ```bash
-   node dashboard/server.js
-   ```
-3. Run the mock script from the root folder:
-   ```bash
-   python mock_esp32.py
-   ```
-4. Open `http://localhost:3000` in your browser. The mock script streams simulated sensor data and images to verify that charts and camera feeds update in real-time.
-
----
-
-## Execution for Final System
-1. Start the MQTT broker (Mosquitto).
-2. Run the main application: `python main.py`.
-3. Start the dashboard: `node dashboard/server.js`.
+To transition from testing to live hardware:
+1. Open `main.py`.
+2. Comment out the **Mock Data Section** (Step 3) in the `start_processes` function.
+3. Power on the ESP32-CAM configured to point to your machine's IP address.
 
 ---
 
 ## License
 This project is licensed under the **MIT License**.
-
