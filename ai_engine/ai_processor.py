@@ -7,76 +7,67 @@ import paho.mqtt.client as mqtt
 import tensorflow as tf
 from PIL import Image
 
-# Configuration & Model Loading
+# Configuration
 MODEL_PATH = "fruit_model.h5"
 MQTT_BROKER = "localhost"
-SUB_TOPIC = "hardware/data"
+TOPIC_SENSORS = "esp32/sensors"
+TOPIC_CAMERA = "esp32/camera"
 PUB_TOPIC = "dashboard/update"
 
-print(f"Loading model from {MODEL_PATH}...")
+print(f"Loading model...")
 model = tf.keras.models.load_model(MODEL_PATH)
 
-IMG_HEIGHT = 224 
-IMG_WIDTH = 224
+# State Buffer: Holds the last known sensor values
+latest_telemetry = {"temp": 0, "hum": 0, "gas": 0}
 
 def process_and_predict(base64_str):
-    """Decodes image, resizes, and runs inference."""
     try:
-        # Decode Base64 string to image bytes
         img_bytes = base64.b64decode(base64_str)
         img = Image.open(io.BytesIO(img_bytes)).convert('RGB')
-        
-        # Resize to model input size
-        img = img.resize((IMG_HEIGHT, IMG_WIDTH))
-        
-        # Convert to numpy array and normalize (0-1)
+        img = img.resize((224, 224))
         img_array = tf.keras.utils.img_to_array(img)
         img_array = np.expand_dims(img_array, 0) / 255.0
         
-        # Run Inference
         predictions = model.predict(img_array)
-        
-        # Adjust logic if your model uses categorical (multi-class) output
         confidence = float(predictions) * 100
-        is_spoiled = confidence > 75.0 # Threshold for Red Alert
-        
-        return round(confidence, 1), is_spoiled
+        return round(confidence, 1), confidence > 75.0
     except Exception as e:
         print(f"Inference Error: {e}")
         return 0.0, False
 
 def on_message(client, userdata, msg):
-    """Triggered when new hardware data arrives."""
+    global latest_telemetry
     try:
-        data = json.loads(msg.payload)
-        
-        # Extract Image and run AI
-        confidence, alert = process_and_predict(data['image'])
-        
-        # Enrich the payload for the dashboard
-        processed_payload = {
-            "temp": data.get('temp', 0),
-            "hum": data.get('hum', 0),
-            "gas": data.get('gas', 0),
-            "image": data['image'],
-            "confidence": confidence,
-            "alert": alert
-        }
-        
-        # Forward to Dashboard
-        client.publish(PUB_TOPIC, json.dumps(processed_payload))
-        print(f"Processed: Alert={alert} | Confidence={confidence}%")
-        
-    except Exception as e:
-        print(f"Error in on_message: {e}")
+        # Update Sensors State
+        if msg.topic == TOPIC_SENSORS:
+            latest_telemetry.update(json.loads(msg.payload))
+            print("Telemetry Cache Updated")
 
-# 2. MQTT Setup
+        # Process Image and Publish Combined Data
+        elif msg.topic == TOPIC_CAMERA:
+            img_str = msg.payload.decode('utf-8')
+            confidence, alert = process_and_predict(img_str)
+            
+            # Late-Stage Fusion: Combine cached sensors with current image AI
+            processed_payload = {
+                **latest_telemetry,
+                "image": img_str,
+                "confidence": confidence,
+                "alert": alert
+            }
+            
+            client.publish(PUB_TOPIC, json.dumps(processed_payload))
+            print(f"Update Sent: Confidence {confidence}% | Alert: {alert}")
+            
+    except Exception as e:
+        print(f"Error: {e}")
+
 client = mqtt.Client()
 client.on_message = on_message
-
-print(f"Connecting to broker at {MQTT_BROKER}...")
 client.connect(MQTT_BROKER, 1883, 60)
-client.subscribe(SUB_TOPIC)
 
-print("AI Processor is online and listening for hardware data.")
+# Subscribe to both independent hardware streams
+client.subscribe([(TOPIC_SENSORS, 0), (TOPIC_CAMERA, 0)])
+
+print("AI Processor: Listening for separate Sensor and Camera streams...")
 client.loop_forever()

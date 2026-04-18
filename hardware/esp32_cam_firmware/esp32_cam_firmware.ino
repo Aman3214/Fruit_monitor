@@ -1,4 +1,4 @@
-0#include "esp_camera.h"
+#include "esp_camera.h"
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <DHT.h>

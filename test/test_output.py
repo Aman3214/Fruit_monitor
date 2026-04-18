@@ -5,48 +5,41 @@ import os
 import json
 import random
 
-# --- UPDATED CONFIGURATION ---
 MQTT_BROKER = "localhost"
-MQTT_PORT = 1883
-IMAGE_TOPIC = "esp32/camera" 
-DATA_TOPIC = "hardware/data" 
+TOPIC_CAMERA = "esp32/camera" 
+TOPIC_SENSORS = "esp32/sensors" 
 TEST_IMAGE_DIR = "test_images"
 
 client = mqtt.Client()
 
-def send_mock_payload():
-    # 1. Encode Image
-    images = [f for f in os.listdir(TEST_IMAGE_DIR) if f.endswith(('.jpg', '.png'))]
-    if not images: return
-    
-    with open(os.path.join(TEST_IMAGE_DIR, random.choice(images)), "rb") as f:
-        img_str = base64.b64encode(f.read()).decode('utf-8')
-
-    # 2. Create Combined Payload 
-    # Ensure these keys match what your ai_processor.py 'json.loads' expects
-    payload = {
-        "image": img_str,
+def send_separate_data():
+    # 1. Send Sensor Data (Simulating the DHT22/MQ135 loop)
+    sensor_payload = {
         "temp": round(random.uniform(22, 28), 1),
         "hum": round(random.uniform(50, 65), 1),
         "gas": random.randint(400, 700)
     }
+    client.publish(TOPIC_SENSORS, json.dumps(sensor_payload))
+    print(f"Published Sensors to {TOPIC_SENSORS}")
 
-    print(f"Sending combined payload to {DATA_TOPIC}...")
-    client.connect(MQTT_BROKER, MQTT_PORT)
-    client.publish(DATA_TOPIC, json.dumps(payload))
-    client.disconnect()
+    # 2. Send Image Data (Simulating the Camera capture)
+    images = [f for f in os.listdir(TEST_IMAGE_DIR) if f.endswith(('.jpg', '.png'))]
+    if images:
+        with open(os.path.join(TEST_IMAGE_DIR, random.choice(images)), "rb") as f:
+            img_str = base64.b64encode(f.read()).decode('utf-8')
+        client.publish(TOPIC_CAMERA, img_str)
+        print(f"Published Image to {TOPIC_CAMERA}")
 
 def run_mock_loop():
-    client.connect("localhost", 1883, 60) # This is the connect_mqtt logic
-    client.loop_start() # Starts a background thread to handle the connection
+    client.connect(MQTT_BROKER, 1883, 60)
+    client.loop_start()
     
     try:
         while True:
-            send_mock_payload() # Your function that publishes the image/json
-            print("Mock data sent. Waiting 5 seconds...")
+            send_separate_data()
+            print("Cycle complete. Waiting 5 seconds...\n")
             time.sleep(5)
     except KeyboardInterrupt:
-        print("Stopping mock stream...")
         client.loop_stop()
         client.disconnect()
 
