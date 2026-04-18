@@ -1,9 +1,8 @@
-#include "esp_camera.h"
+0#include "esp_camera.h"
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <DHT.h>
-#include <Base64.h>
-
+#include "base64.h"
 // --- Configuration ---
 const char* ssid = "YOUR_WIFI_SSID";
 const char* password = "YOUR_WIFI_PASSWORD";
@@ -52,8 +51,8 @@ void setupCamera() {
     config.pin_pclk = PCLK_GPIO_NUM;
     config.pin_vsync = VSYNC_GPIO_NUM;
     config.pin_href = HREF_GPIO_NUM;
-    config.pin_sscb_sda = SIOD_GPIO_NUM;
-    config.pin_sscb_scl = SIOC_GPIO_NUM;
+    config.pin_sccb_sda = SIOD_GPIO_NUM;
+    config.pin_sccb_scl = SIOC_GPIO_NUM;
     config.pin_pwdn = PWDN_GPIO_NUM;
     config.pin_reset = RESET_GPIO_NUM;
     config.xclk_freq_hz = 20000000;
@@ -101,8 +100,13 @@ void loop() {
     // 1. Capture Image
     camera_fb_t * fb = esp_camera_fb_get();
     if (fb) {
+        // Correct native ESP32 way to encode
         String base64Image = base64::encode(fb->buf, fb->len);
+        
+        // Publish to MQTT
         client.publish("esp32/camera", base64Image.c_str());
+        
+        // Return the frame buffer to memory
         esp_camera_fb_return(fb);
     }
 
